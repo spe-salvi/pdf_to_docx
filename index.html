@@ -114,9 +114,9 @@
 
         <label class="drop-zone" id="dropZone">
             <span id="dropText">Drag & Drop or Click to Select PDF(s)</span>
-            <input type="file" id="pdfInput" accept=".pdf" multiple />
+            <input type="file" id="pdfInput" accept=".pdf" />
         </label>
-        <ul id="fileList"></ul>
+        <p id="fileName"></p>
         <button onclick="convertPDFs()">Convert</button>
 
     </div>
@@ -124,11 +124,9 @@
     <script>
         const input = document.getElementById("pdfInput");
         const dropZone = document.getElementById("dropZone");
-        const fileList = document.getElementById("fileList");
+        const fileName = document.getElementById("fileName");
 
-        input.addEventListener("change", () => {
-            showSelectedFiles();
-        });
+        input.addEventListener("change", showSelectedFile);
 
         dropZone.addEventListener("dragover", (e) => {
             e.preventDefault();
@@ -142,30 +140,33 @@
         dropZone.addEventListener("drop", (e) => {
             e.preventDefault();
             dropZone.classList.remove("dragover");
-            input.files = e.dataTransfer.files;
-            showSelectedFiles();
+
+            const files = e.dataTransfer.files;
+            if (files.length > 1) {
+                alert("Please upload only one PDF at a time.");
+                return;
+            }
+
+            input.files = files;
+            showSelectedFile();
         });
 
-        function showSelectedFiles() {
-            fileList.innerHTML = "";
-            Array.from(input.files).forEach(file => {
-                const li = document.createElement("li");
-                li.textContent = file.name;
-                fileList.appendChild(li);
-            });
+        function showSelectedFile() {
+            const file = input.files[0];
+            const fileNameElement = document.getElementById("fileName");
+            fileNameElement.textContent = file ? file.name : "";
         }
 
+        
         async function convertPDFs() {
-            const files = input.files;
-            if (!files.length) {
-                alert("Please select at least one PDF.");
+            const file = input.files[0];
+            if (!file) {
+                alert("Please select a PDF.");
                 return;
             }
 
             const formData = new FormData();
-            for (const file of files) {
-                formData.append("files", file);
-            }
+            formData.append("file", file);  // Changed from "files" to "file" for single upload
 
             try {
                 const response = await fetch("http://127.0.0.1:8000/convert/", {
@@ -180,14 +181,10 @@
 
                 const blob = await response.blob();
                 const contentDisposition = response.headers.get("Content-Disposition");
-                let filename = "converted_output";
+                let filename = file.name.replace(/\.pdf$/i, ".docx");
 
                 if (contentDisposition && contentDisposition.includes("filename=")) {
                     filename = contentDisposition.split("filename=")[1].replace(/["']/g, "");
-                } else if (files.length === 1) {
-                    filename = files[0].name.replace(".pdf", ".docx");
-                } else {
-                    filename += ".zip";
                 }
 
                 const url = window.URL.createObjectURL(blob);

@@ -170,13 +170,14 @@
             formData.append("file", file);  // Changed from "files" to "file" for single upload
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/convert/", {
+                const response = await fetch("https://pdf-to-docx-khve.onrender.com/convert/", {
                     method: "POST",
                     body: formData
                 });
 
                 if (!response.ok) {
-                    alert("An error occurred during conversion.");
+                    const errorData = await response.json();
+                    alert("Error: " + errorData.error);
                     return;
                 }
 

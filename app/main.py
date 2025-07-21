@@ -30,16 +30,20 @@ async def convert(file: UploadFile = File(...)):
     try:
         contents = await file.read()
 
-        input_path = f"/tmp/{uuid.uuid4().hex}.pdf"
+        input_path = os.path.join(output_dir, f"{uuid.uuid4().hex}.pdf")
         output_filename = file.filename.replace('.pdf', '.docx')
         output_path = os.path.join(output_dir, output_filename)
 
         with open(input_path, "wb") as f:
             f.write(contents)
+            f.flush()
+            os.fsync(f.fileno())
 
         cv = Converter(input_path)
-        cv.convert(output_path, start=0, end=None)
-        cv.close()
+        try:
+            cv.convert(output_path, start=0, end=None)
+        finally:
+            cv.close()
 
         return FileResponse(output_path, filename=os.path.basename(output_path))
 

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>PDF to DOCX Converter</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background: #f7f9fb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            background: #ffffff;
+            padding: 2.5rem 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            text-align: center;
+            width: 90%;
+            max-width: 420px;
+        }
+
+
+        h1 {
+            margin-bottom: 1.5rem;
+            font-size: 1.75rem;
+            font-weight: 600;
+        }
+
+        .drop-zone {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            border: 2px dashed #a6b1c0;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            background-color: #f0f3f7;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            min-height: 120px;
+            position: relative;
+        }
+
+        .drop-zone.dragover {
+            background-color: #e3eaf2;
+        }
+
+        .drop-zone span {
+            pointer-events: none;
+            font-size: 1rem;
+            color: #555;
+        }
+
+        #pdfInput {
+            display: none;
+        }
+
+        #fileName {
+            margin: 1.25rem 0 1.5rem;
+            font-size: 0.95rem;
+            color: #666;
+            font-style: italic;
+            min-height: 1.5rem;
+        }
+
+        #fileList {
+            list-style: none;
+            padding: 0;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            color: #333;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            border: none;
+            border-radius: 0.75rem;
+            background-color: #4263eb;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(66, 99, 235, 0.3);
+            transition: background-color 0.2s ease;
+        }
+
+        button:hover {
+            background-color: #314ccd;
+        }
+
+        button:disabled {
+            background-color: #b3c1f0;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Convert PDF</h1>
+
+        <label class="drop-zone" id="dropZone">
+            <span id="dropText">Drag & Drop or Click to Select PDF(s)</span>
+            <input type="file" id="pdfInput" accept=".pdf" multiple />
+        </label>
+        <ul id="fileList"></ul>
+        <button onclick="convertPDFs()">Convert</button>
+
+    </div>
+
+    <script>
+        const input = document.getElementById("pdfInput");
+        const dropZone = document.getElementById("dropZone");
+        const fileList = document.getElementById("fileList");
+
+        input.addEventListener("change", () => {
+            showSelectedFiles();
+        });
+
+        dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZone.classList.add("dragover");
+        });
+
+        dropZone.addEventListener("dragleave", () => {
+            dropZone.classList.remove("dragover");
+        });
+
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("dragover");
+            input.files = e.dataTransfer.files;
+            showSelectedFiles();
+        });
+
+        function showSelectedFiles() {
+            fileList.innerHTML = "";
+            Array.from(input.files).forEach(file => {
+                const li = document.createElement("li");
+                li.textContent = file.name;
+                fileList.appendChild(li);
+            });
+        }
+
+        async function convertPDFs() {
+            const files = input.files;
+            if (!files.length) {
+                alert("Please select at least one PDF.");
+                return;
+            }
+
+            const formData = new FormData();
+            for (const file of files) {
+                formData.append("files", file);
+            }
+
+            try {
+                const response = await fetch("http://127.0.0.1:8000/convert/", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    alert("An error occurred during conversion.");
+                    return;
+                }
+
+                const blob = await response.blob();
+                const contentDisposition = response.headers.get("Content-Disposition");
+                let filename = "converted_output";
+
+                if (contentDisposition && contentDisposition.includes("filename=")) {
+                    filename = contentDisposition.split("filename=")[1].replace(/["']/g, "");
+                } else if (files.length === 1) {
+                    filename = files[0].name.replace(".pdf", ".docx");
+                } else {
+                    filename += ".zip";
+                }
+
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = filename;
+                a.click();
+                window.URL.revokeObjectURL(url);
+            } catch (err) {
+                console.error("Conversion failed:", err);
+                alert("An error occurred during conversion.");
+            }
+        }
+    </script>
+</body>
+
+</html>

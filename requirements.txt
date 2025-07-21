@@ -1,0 +1,5 @@
+fastapi
+pdf2docx
+zipfile
+os
+uuid

@@ -1,5 +1,0 @@
-fastapi
-uvicorn
-pdf2docx
-uuid
-python-multipart
